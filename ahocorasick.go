@@ -15,10 +15,11 @@ import (
 )
 
 type trieNode struct {
-	count int
-	fail  *trieNode
-	child map[rune]*trieNode
-	index int
+	count   int
+	fail    *trieNode
+	child   map[rune]*trieNode
+	index   int
+	wordlen int
 }
 
 func newTrieNode() *trieNode {
@@ -48,12 +49,11 @@ func NewMatcher(dict []string) *ACMatcher {
 	return m
 }
 
-//包含敏感词位置、个数
+//包含敏感词位置、个数，统计所有可能项，比如"民主权"会统计成两个词
 func (m *ACMatcher) Match(s string) []int {
 	curNode := m.root
 	var p *trieNode = nil
-	ret := make([]int, 0)
-	mark := make(map[int]bool)
+	var ret []int
 	for _, v := range s {
 		for curNode.child[v] == nil && curNode != m.root {
 			curNode = curNode.fail
@@ -63,8 +63,7 @@ func (m *ACMatcher) Match(s string) []int {
 			curNode = m.root
 		}
 		p = curNode
-		for p != m.root && p.count > 0 && !mark[p.index] {
-			mark[p.index] = true
+		for p != m.root && p.count > 0 {
 			for i := 0; i < p.count; i++ {
 				ret = append(ret, p.index)
 			}
@@ -72,6 +71,32 @@ func (m *ACMatcher) Match(s string) []int {
 		}
 	}
 	return ret
+}
+
+//将s中的敏感词替换为repl，一旦匹配到敏感词立即替换，不会参与后续匹配
+func (m *ACMatcher) Replace(s string, repl string) string {
+	curNode := m.root
+	var p *trieNode = nil
+	var ret []rune
+	replr := []rune(repl)
+	for _, v := range s {
+		for curNode.child[v] == nil && curNode != m.root {
+			curNode = curNode.fail
+		}
+		curNode = curNode.child[v]
+		if curNode == nil {
+			curNode = m.root
+		}
+		p = curNode
+		if p != m.root && p.count > 0 {
+			ret = ret[:len(ret)-p.wordlen+1]
+			ret = append(ret, replr...)
+			curNode = m.root
+		} else {
+			ret = append(ret, v)
+		}
+	}
+	return string(ret)
 }
 
 //是否包含敏感词，查找到任意立即返回
@@ -133,6 +158,7 @@ func (m *ACMatcher) insert(s string) {
 		}
 		curNode = curNode.child[v]
 	}
+	curNode.wordlen = len([]rune(s))
 	curNode.count++
 	curNode.index = m.size
 	m.size++
