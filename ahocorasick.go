@@ -75,7 +75,7 @@ func (m *ACMatcher) Match(s string) []int {
 }
 
 //是否包含敏感词，查找到任意立即返回
-func (m *ACMatcher) Has(s string) bool{
+func (m *ACMatcher) Has(s string) bool {
 	curNode := m.root
 	var p *trieNode = nil
 	for _, v := range s {
@@ -94,6 +94,9 @@ func (m *ACMatcher) Has(s string) bool{
 	return false
 }
 
+func (m *ACMatcher) Size() int {
+	return m.size
+}
 
 func (m *ACMatcher) build() {
 	ll := list.New()
